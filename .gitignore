@@ -24,10 +24,11 @@ env/
 .DS_Store
 Thumbs.db
 
-# Data files (user-specific, regenerated on first run)
+# User-specific data and config (regenerated on first run)
 data/history.json
 data/favorites.json
 data/exclusions.json
+config/pantry_staples.yaml
 
 # Keep the data directory structure
 !data/.gitkeep
