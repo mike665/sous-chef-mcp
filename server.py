@@ -799,25 +799,29 @@ async def recipe_format_menu(params: MenuFormatInput, ctx: Context) -> str:
     html.append("<hr>")
     html.append("<h2>Shopping List</h2>")
 
+    # Apple Notes checklist styles
+    CL_UL = '<ul style="-apple-note-checkbox">'
+    CL_LI = '<li style="-apple-note-checkbox-unchecked">'
+
     def _render_grouped(groups: list[dict]):
-        """Render grouped ingredients as HTML list items."""
+        """Render grouped ingredients as checklist items."""
         for group in groups:
             entries = group["entries"]
             if len(entries) == 1:
                 e = entries[0]
-                html.append(f"<li>{e['ingredient']} ({e['recipe']})</li>")
+                html.append(f"{CL_LI}{e['ingredient']} ({e['recipe']})</li>")
             else:
                 recipes_str = ", ".join(e["recipe"] for e in entries)
-                html.append(f"<li><b>{group['base'].title()}</b> ({recipes_str})")
-                html.append("<ul>")
+                html.append(f"{CL_LI}<b>{group['base'].title()}</b> ({recipes_str})")
+                html.append(CL_UL)
                 for e in entries:
-                    html.append(f"<li>{e['ingredient']} ({e['recipe']})</li>")
+                    html.append(f"{CL_LI}{e['ingredient']} ({e['recipe']})</li>")
                 html.append("</ul></li>")
 
     for cat in category_order:
         if cat in grouped_categorized and grouped_categorized[cat]:
             html.append(f"<h3>{cat}</h3>")
-            html.append("<ul>")
+            html.append(CL_UL)
             _render_grouped(grouped_categorized[cat])
             html.append("</ul>")
 
@@ -825,23 +829,23 @@ async def recipe_format_menu(params: MenuFormatInput, ctx: Context) -> str:
     for cat, groups in grouped_categorized.items():
         if cat not in category_order and groups:
             html.append(f"<h3>{cat}</h3>")
-            html.append("<ul>")
+            html.append(CL_UL)
             _render_grouped(groups)
             html.append("</ul>")
 
     # Pantry staples section
     if grouped_pantry:
         html.append("<h3>Pantry Staples (verify stock)</h3>")
-        html.append("<ul>")
+        html.append(CL_UL)
         _render_grouped(grouped_pantry)
         html.append("</ul>")
 
     # Extra items
     if params.extra_items:
         html.append("<h3>Other</h3>")
-        html.append("<ul>")
+        html.append(CL_UL)
         for item in params.extra_items:
-            html.append(f"<li>{item}</li>")
+            html.append(f"{CL_LI}{item}</li>")
         html.append("</ul>")
 
     # Timing summary at the bottom
