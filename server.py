@@ -665,12 +665,11 @@ async def recipe_format_menu(params: MenuFormatInput, ctx: Context) -> str:
             except Exception as e:
                 errors.append(f"Failed to fetch {url}: {str(e)}")
 
-    # Build the menu section
-    lines = []
-    lines.append(f"Weekly Menu {header_start}")
-    lines.append("")
-    lines.append("Weekly Overview:")
-    lines.append("")
+    # Build the menu as HTML so Apple Notes preserves formatting
+    html = []
+    html.append(f"<h1>Weekly Menu {header_start}</h1>")
+    html.append("<h2>Weekly Overview</h2>")
+    html.append("<ul>")
 
     for entry in params.menu:
         day = entry.get("day", "")
@@ -678,10 +677,7 @@ async def recipe_format_menu(params: MenuFormatInput, ctx: Context) -> str:
         label = entry.get("label", "")
         is_on_deck = entry.get("on_deck", False)
 
-        if is_on_deck:
-            prefix = "On deck:"
-        else:
-            prefix = f"{day}:"
+        prefix = "On deck" if is_on_deck else day
 
         if url:
             recipe = recipes_by_url.get(url)
@@ -691,13 +687,13 @@ async def recipe_format_menu(params: MenuFormatInput, ctx: Context) -> str:
                     time_note = f" ({recipe['total_time_min']} min)"
                 elif recipe["cook_time_min"]:
                     time_note = f" ({recipe['cook_time_min']} min cook)"
-                lines.append(f"{prefix}  {url}{time_note}")
+                html.append(f'<li><b>{prefix}:</b> <a href="{url}">{recipe["name"]}</a>{time_note}</li>')
             else:
-                lines.append(f"{prefix}  {url}")
+                html.append(f'<li><b>{prefix}:</b> <a href="{url}">{url}</a></li>')
         else:
-            lines.append(f"{prefix} {label}")
+            html.append(f"<li><b>{prefix}:</b> {label}</li>")
 
-    lines.append("")
+    html.append("</ul>")
 
     # Aggregate ingredients
     categorized: dict[str, list[str]] = {}
@@ -730,43 +726,46 @@ async def recipe_format_menu(params: MenuFormatInput, ctx: Context) -> str:
         "Other",
     ]
 
+    html.append("<hr>")
+    html.append("<h2>Shopping List</h2>")
+
     for cat in category_order:
         if cat in categorized and categorized[cat]:
-            lines.append(cat)
-            lines.append("")
+            html.append(f"<h3>{cat}</h3>")
+            html.append("<ul>")
             for item in categorized[cat]:
-                lines.append(f"* {item}")
-            lines.append("")
+                html.append(f"<li>{item}</li>")
+            html.append("</ul>")
 
     # Any remaining categories not in preferred order
     for cat, items in categorized.items():
         if cat not in category_order and items:
-            lines.append(cat)
-            lines.append("")
+            html.append(f"<h3>{cat}</h3>")
+            html.append("<ul>")
             for item in items:
-                lines.append(f"* {item}")
-            lines.append("")
+                html.append(f"<li>{item}</li>")
+            html.append("</ul>")
 
     # Pantry staples section
     if pantry_section:
-        lines.append("Pantry Staples (verify stock)")
-        lines.append("")
+        html.append("<h3>Pantry Staples (verify stock)</h3>")
+        html.append("<ul>")
         for item in pantry_section:
-            lines.append(f"* {item}")
-        lines.append("")
+            html.append(f"<li>{item}</li>")
+        html.append("</ul>")
 
     # Extra items
     if params.extra_items:
-        lines.append("Other")
-        lines.append("")
+        html.append("<h3>Other</h3>")
+        html.append("<ul>")
         for item in params.extra_items:
-            lines.append(f"* {item}")
-        lines.append("")
+            html.append(f"<li>{item}</li>")
+        html.append("</ul>")
 
     # Timing summary at the bottom
-    lines.append("---")
-    lines.append("Prep & Cook Times:")
-    lines.append("")
+    html.append("<hr>")
+    html.append("<h3>Prep &amp; Cook Times</h3>")
+    html.append("<ul>")
     for recipe in recipes_by_url.values():
         time_parts = []
         if recipe["prep_time_min"]:
@@ -776,16 +775,18 @@ async def recipe_format_menu(params: MenuFormatInput, ctx: Context) -> str:
         if recipe["total_time_min"]:
             time_parts.append(f"total {recipe['total_time_min']}min")
         time_str = ", ".join(time_parts) if time_parts else "time not specified"
-        lines.append(f"* {recipe['name']}: {time_str}")
+        html.append(f"<li>{recipe['name']}: {time_str}</li>")
+    html.append("</ul>")
 
     if errors:
-        lines.append("")
-        lines.append("---")
-        lines.append("Warnings:")
+        html.append("<hr>")
+        html.append("<h3>Warnings</h3>")
+        html.append("<ul>")
         for err in errors:
-            lines.append(f"* {err}")
+            html.append(f"<li>{err}</li>")
+        html.append("</ul>")
 
-    formatted = "\n".join(lines)
+    formatted = "\n".join(html)
     return json.dumps({"formatted_menu": formatted, "errors": errors})
 
 
