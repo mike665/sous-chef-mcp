@@ -120,6 +120,34 @@ Ingredients you always keep stocked. These still appear on the shopping list but
 - `feedback.json` — Locally saved feedback (fallback when GitHub CLI is unavailable)
 - `error.log` — Persistent error and warning log
 
+## Apple Notes Integration
+
+The shopping list is designed to output directly to Apple Notes as a structured, interactive document — not plain text that gets copy-pasted.
+
+### How it works
+
+`recipe_format_menu` builds the entire menu and shopping list as **HTML**, using Apple Notes-specific CSS styles to render native checkboxes. The HTML includes:
+
+- **Headings** (`<h1>`, `<h2>`, `<h3>`) for the menu title, weekly overview, and shopping list sections
+- **Linked recipe names** so you can tap through to the original recipe
+- **Tappable checkboxes** for every shopping list item, using Apple's `-apple-note-checkbox` CSS style — these render as native iOS/macOS checklist items you can tick off while shopping
+- **Grouped ingredients** with nested checklists when multiple recipes call for the same base ingredient (e.g., all onion entries grouped under one "Onion" parent)
+- **Store sections** (Produce, Protein, Dairy, etc.) so the list follows a logical shopping path
+
+`recipe_export_apple_note` then writes this HTML directly into Apple Notes via **AppleScript** (`osascript`), which preserves all formatting, links, and checkboxes exactly as built. This bypasses Claude's normal text output, which would otherwise reformat or flatten the HTML. You can optionally specify a folder name to organize notes (e.g., "Meal Plans").
+
+### Requirements
+
+- **macOS only** — Apple Notes and AppleScript are not available on other platforms
+- The Notes app must be present (it is by default on macOS)
+- No additional permissions or authentication needed — AppleScript accesses Notes directly
+
+### Typical flow
+
+1. `recipe_format_menu` fetches recipes, builds the HTML menu + categorized shopping list
+2. `recipe_export_apple_note` receives that HTML and writes it to Apple Notes as a new note
+3. Open Apple Notes on your Mac or iPhone — the shopping list is ready with tappable checkboxes
+
 ## How JSON-LD Extraction Works
 
 Recipe websites embed structured data in their HTML for Google rich search results. The server extracts this directly, which includes:
@@ -136,6 +164,7 @@ This means the shopping list is built from exactly what the recipe author publis
 
 - Python 3.10+
 - Claude Desktop with MCP support
+- macOS (required for Apple Notes export; all other features work cross-platform)
 - GitHub CLI (optional, for feedback and self-update)
 
 ## License
