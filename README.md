@@ -20,6 +20,7 @@ Almost every major recipe website embeds structured JSON-LD data using the [sche
 - **Pantry staples management** for ingredients you always have on hand (listed separately as "verify stock")
 - **Cook and prep time tracking** with timing info on the menu to help plan around long-prep meals
 - **Favorites and history** to track what you've made, save winners, and avoid repeats
+- **Repeat detection** — warns if a recipe was used in the last 7 days, so you don't get back-to-back weeks of the same meal
 - **Exclusion list** for recipes or ingredients you don't like
 - **Configurable site discovery** with search patterns and category URLs for your favorite recipe sites
 - **Add new sites on the fly** either by editing config or asking Claude during a conversation

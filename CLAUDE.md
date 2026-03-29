@@ -47,7 +47,7 @@ There are no tests, linter, or formatter configured.
 ### Data flow:
 1. `recipe_get` fetches a URL, extracts JSON-LD, normalizes to internal format, logs to `data/history.json`
 2. `recipe_build_shopping_list` fetches multiple URLs, categorizes and groups ingredients, separates pantry staples
-3. `recipe_format_menu` orchestrates the full workflow: fetches recipes, builds grouped shopping list as HTML with checkboxes
+3. `recipe_format_menu` orchestrates the full workflow: fetches recipes, checks history for 7-day repeats, builds grouped shopping list as HTML with checkboxes. Returns `repeat_warning` if any recipes were used in the last week.
 4. `recipe_export_apple_note` writes the HTML to Apple Notes via AppleScript
 
 ### Config files:
