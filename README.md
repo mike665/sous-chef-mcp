@@ -14,32 +14,34 @@ Almost every major recipe website embeds structured JSON-LD data using the [sche
 
 - **Verified ingredient extraction** from any recipe site using schema.org JSON-LD (site-agnostic, no per-site scraping)
 - **Categorized shopping lists** grouped by store section: Protein, Dairy, Produce, Dry Goods, Frozen, Bread & Bakery
+- **Ingredient grouping** — like ingredients from multiple recipes are grouped together (e.g. all onions in one place)
+- **Apple Notes checklists** — shopping list items render as tappable checkboxes, with direct export via AppleScript
 - **Recipe attribution** on every ingredient so you know which recipe needs what
 - **Pantry staples management** for ingredients you always have on hand (listed separately as "verify stock")
 - **Cook and prep time tracking** with timing info on the menu to help plan around long-prep meals
 - **Favorites and history** to track what you've made, save winners, and avoid repeats
 - **Exclusion list** for recipes or ingredients you don't like
-- **Apple Notes formatting** with your preferred layout, ready for direct export
 - **Configurable site discovery** with search patterns and category URLs for your favorite recipe sites
 - **Add new sites on the fly** either by editing config or asking Claude during a conversation
+- **Feedback and bug reports** — submit issues directly to GitHub from within Claude Desktop
+- **Self-updating** — pull the latest version from GitHub without leaving Claude Desktop
 
 ## Quick Start
 
 ```bash
-# Clone and set up
-git clone https://github.com/Mike665/sous-chef-mcp.git
+git clone https://github.com/mike665/sous-chef-mcp.git
 cd sous-chef-mcp
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+bash setup.sh
 ```
+
+The setup script creates the virtual environment, installs dependencies, generates a default pantry staples list, and prints the Claude Desktop config snippet.
 
 Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
-    "recipe_mcp": {
+    "sous_chef": {
       "command": "/path/to/sous-chef-mcp/venv/bin/python",
       "args": ["/path/to/sous-chef-mcp/server.py"]
     }
@@ -49,13 +51,25 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 
 Restart Claude Desktop.
 
+### Optional: GitHub CLI
+
+Install the [GitHub CLI](https://cli.github.com/) for feedback and self-update features:
+
+```bash
+brew install gh
+gh auth login
+```
+
+Without it, feedback saves locally and self-update won't work.
+
 ## Tools
 
 | Tool | Description |
 |------|-------------|
 | `recipe_get` | Extract structured recipe data from any URL |
-| `recipe_build_shopping_list` | Aggregate multiple recipes into a categorized shopping list |
-| `recipe_format_menu` | Format a full weekly menu + shopping list for Apple Notes |
+| `recipe_build_shopping_list` | Aggregate multiple recipes into a categorized shopping list with grouped ingredients |
+| `recipe_format_menu` | Build a weekly menu + shopping list as formatted HTML |
+| `recipe_export_apple_note` | Write HTML content directly to Apple Notes with checkboxes |
 | `recipe_add_site` | Add a new recipe website to the discovery config |
 | `recipe_list_sites` | List all configured recipe sites |
 | `recipe_add_favorite` | Save a recipe to favorites with tags |
@@ -67,6 +81,8 @@ Restart Claude Desktop.
 | `recipe_manage_pantry` | Add/remove pantry staple items |
 | `recipe_list_pantry` | List current pantry staples |
 | `recipe_get_history` | View recently used recipes with dates and use counts |
+| `recipe_feedback` | Submit a bug report, feedback, or feature request as a GitHub issue |
+| `recipe_update` | Pull the latest version from GitHub and reinstall dependencies |
 
 ## Example Workflow
 
@@ -74,12 +90,13 @@ Restart Claude Desktop.
 You: I need a menu for 5 days: 1 vegetarian, 1 fish, only 1 red meat.
      Browse skinnytaste and halfbakedharvest for options.
      Check my history to avoid repeats.
-     Build the Apple Notes output with "hand soap" as an extra item.
+     Export the menu and shopping list to Apple Notes.
 
-Claude: [browses sites, picks recipes matching constraints]
+Claude: [calls recipe_list_sites to get configured sources]
+        [browses sites, picks recipes matching constraints]
         [calls recipe_get on each URL for verified ingredients]
-        [calls recipe_format_menu to build formatted output]
-        [exports to Apple Notes via connector]
+        [calls recipe_format_menu to build formatted HTML]
+        [calls recipe_export_apple_note to create the checklist note]
 ```
 
 ## Configuration
@@ -92,30 +109,33 @@ Pre-configured sites: Skinnytaste, Half Baked Harvest, Chelsea's Messy Apron, Re
 
 ### config/pantry_staples.yaml
 
-Ingredients you always keep stocked. These still appear on the shopping list but in a separate "Pantry Staples (verify stock)" section. Edit directly or use the `recipe_manage_pantry` tool.
+Ingredients you always keep stocked. These still appear on the shopping list but in a separate "Pantry Staples (verify stock)" section with checkboxes. Edit directly or use the `recipe_manage_pantry` tool. Generated with defaults on first setup.
 
-### data/ (auto-generated)
+### data/ (auto-generated, gitignored)
 
-- `favorites.json` - Saved favorite recipes with tags
-- `exclusions.json` - Blocked recipes and ingredients with reasons
-- `history.json` - Auto-populated log of every recipe fetched
+- `favorites.json` — Saved favorite recipes with tags
+- `exclusions.json` — Blocked recipes and ingredients with reasons
+- `history.json` — Auto-populated log of every recipe fetched
+- `feedback.json` — Locally saved feedback (fallback when GitHub CLI is unavailable)
+- `error.log` — Persistent error and warning log
 
 ## How JSON-LD Extraction Works
 
 Recipe websites embed structured data in their HTML for Google rich search results. The server extracts this directly, which includes:
 
-- `recipeIngredient` - exact ingredient list with quantities
-- `prepTime` / `cookTime` / `totalTime` - ISO 8601 durations
-- `recipeYield` - serving size
-- `recipeInstructions` - step-by-step directions
-- `recipeCategory`, `recipeCuisine`, `keywords` - metadata
+- `recipeIngredient` — exact ingredient list with quantities
+- `prepTime` / `cookTime` / `totalTime` — ISO 8601 durations
+- `recipeYield` — serving size
+- `recipeInstructions` — step-by-step directions
+- `recipeCategory`, `recipeCuisine`, `keywords` — metadata
 
-This means the shopping list is built from exactly what the recipe author published, not from Claude's interpretation of the page text. If an ingredient isn't in the recipe's structured data, it won't appear on your shopping list.
+This means the shopping list is built from exactly what the recipe author published, not from Claude's interpretation of the page text.
 
 ## Requirements
 
 - Python 3.10+
 - Claude Desktop with MCP support
+- GitHub CLI (optional, for feedback and self-update)
 
 ## License
 
