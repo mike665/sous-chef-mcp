@@ -308,6 +308,48 @@ def _categorize_ingredient(ingredient: str) -> str:
     return "Other"
 
 
+# Build a flat list of all keywords sorted longest-first so "green onion"
+# matches before "onion", "sweet potato" before "potato", etc.
+_ALL_KEYWORDS = []
+for _kws in CATEGORY_RULES.values():
+    _ALL_KEYWORDS.extend(_kws)
+_ALL_KEYWORDS.extend(SPICE_KEYWORDS)
+_ALL_KEYWORDS.sort(key=len, reverse=True)
+
+
+def _base_ingredient(ingredient: str) -> str:
+    """Extract the base ingredient name for grouping similar items.
+
+    Uses the keyword lists to find the most specific match. For example,
+    '1/2 medium yellow onion, diced' -> 'onion',
+    '2 cups baby bok choy' -> 'bok choy'.
+    Falls back to the full ingredient string if no keyword matches.
+    """
+    lower = ingredient.lower()
+    for kw in _ALL_KEYWORDS:
+        if kw in lower:
+            return kw
+    return ingredient.lower().strip()
+
+
+def _group_ingredients(items: list[dict]) -> list[dict]:
+    """Group ingredient entries by base ingredient.
+
+    Input:  [{"ingredient": "1/2 onion, diced", "recipe": "Lasagna"}, ...]
+    Output: [{"base": "onion", "entries": [{"ingredient": ..., "recipe": ...}, ...]}, ...]
+
+    Single-entry groups are kept as-is for clean output.
+    """
+    from collections import OrderedDict
+    groups: OrderedDict[str, list[dict]] = OrderedDict()
+    for item in items:
+        base = _base_ingredient(item["ingredient"])
+        if base not in groups:
+            groups[base] = []
+        groups[base].append(item)
+    return [{"base": base, "entries": entries} for base, entries in groups.items()]
+
+
 def _is_pantry_staple(ingredient: str, pantry_list: list[str]) -> bool:
     """Check if an ingredient matches a pantry staple."""
     lower = ingredient.lower()
@@ -611,9 +653,16 @@ async def recipe_build_shopping_list(params: ShoppingListInput, ctx: Context) ->
         }
         summaries.append(summary)
 
+    # Group like ingredients within each category
+    grouped_categorized = {}
+    for cat, items in categorized.items():
+        grouped_categorized[cat] = _group_ingredients(items)
+
+    grouped_pantry = _group_ingredients(pantry_section)
+
     result = {
-        "shopping_list": categorized,
-        "pantry_staples_needed": pantry_section,
+        "shopping_list": grouped_categorized,
+        "pantry_staples_needed": grouped_pantry,
         "recipe_summaries": summaries,
         "errors": errors,
     }
@@ -708,9 +757,9 @@ async def recipe_format_menu(params: MenuFormatInput, ctx: Context) -> str:
 
     html.append("</ul>")
 
-    # Aggregate ingredients
-    categorized: dict[str, list[str]] = {}
-    pantry_section: list[str] = []
+    # Aggregate ingredients into dicts for grouping
+    categorized: dict[str, list[dict]] = {}
+    pantry_items: list[dict] = []
 
     for recipe in recipes_by_url.values():
         for ingredient in recipe["ingredients"]:
@@ -718,15 +767,23 @@ async def recipe_format_menu(params: MenuFormatInput, ctx: Context) -> str:
             if any(ex in ingredient.lower() for ex in excluded_ingredients):
                 continue
 
+            entry = {"ingredient": ingredient, "recipe": recipe["name"]}
+
             # Check pantry
             if _is_pantry_staple(ingredient, pantry_list):
-                pantry_section.append(f"{ingredient} ({recipe['name']})")
+                pantry_items.append(entry)
                 continue
 
             category = _categorize_ingredient(ingredient)
             if category not in categorized:
                 categorized[category] = []
-            categorized[category].append(f"{ingredient} ({recipe['name']})")
+            categorized[category].append(entry)
+
+    # Group like ingredients within each category
+    grouped_categorized = {}
+    for cat, items in categorized.items():
+        grouped_categorized[cat] = _group_ingredients(items)
+    grouped_pantry = _group_ingredients(pantry_items)
 
     # Preferred category order
     category_order = [
@@ -742,29 +799,41 @@ async def recipe_format_menu(params: MenuFormatInput, ctx: Context) -> str:
     html.append("<hr>")
     html.append("<h2>Shopping List</h2>")
 
+    def _render_grouped(groups: list[dict]):
+        """Render grouped ingredients as HTML list items."""
+        for group in groups:
+            entries = group["entries"]
+            if len(entries) == 1:
+                e = entries[0]
+                html.append(f"<li>{e['ingredient']} ({e['recipe']})</li>")
+            else:
+                recipes_str = ", ".join(e["recipe"] for e in entries)
+                html.append(f"<li><b>{group['base'].title()}</b> ({recipes_str})")
+                html.append("<ul>")
+                for e in entries:
+                    html.append(f"<li>{e['ingredient']} ({e['recipe']})</li>")
+                html.append("</ul></li>")
+
     for cat in category_order:
-        if cat in categorized and categorized[cat]:
+        if cat in grouped_categorized and grouped_categorized[cat]:
             html.append(f"<h3>{cat}</h3>")
             html.append("<ul>")
-            for item in categorized[cat]:
-                html.append(f"<li>{item}</li>")
+            _render_grouped(grouped_categorized[cat])
             html.append("</ul>")
 
     # Any remaining categories not in preferred order
-    for cat, items in categorized.items():
-        if cat not in category_order and items:
+    for cat, groups in grouped_categorized.items():
+        if cat not in category_order and groups:
             html.append(f"<h3>{cat}</h3>")
             html.append("<ul>")
-            for item in items:
-                html.append(f"<li>{item}</li>")
+            _render_grouped(groups)
             html.append("</ul>")
 
     # Pantry staples section
-    if pantry_section:
+    if grouped_pantry:
         html.append("<h3>Pantry Staples (verify stock)</h3>")
         html.append("<ul>")
-        for item in pantry_section:
-            html.append(f"<li>{item}</li>")
+        _render_grouped(grouped_pantry)
         html.append("</ul>")
 
     # Extra items
