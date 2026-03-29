@@ -1,0 +1,58 @@
+sites:
+  skinnytaste:
+    base_url: https://www.skinnytaste.com
+    search_pattern: "/?s={query}"
+    categories:
+      vegetarian: "/category/vegetarian/"
+      fish: "/category/fish-and-shellfish/"
+      chicken: "/category/chicken/"
+      beef: "/category/beef/"
+      pork: "/category/pork/"
+      slow-cooker: "/category/slow-cooker/"
+      instant-pot: "/category/instant-pot/"
+      30-minute: "/category/30-minute-meals/"
+
+  halfbakedharvest:
+    base_url: https://www.halfbakedharvest.com
+    search_pattern: "/?s={query}"
+    categories:
+      vegetarian: "/category/vegetarian/"
+      chicken: "/category/chicken/"
+      beef: "/category/beef-and-pork/"
+      seafood: "/category/seafood/"
+      30-minute: "/category/30-minute-meals/"
+      one-pot: "/category/one-pot-meals/"
+
+  chelseasmessyapron:
+    base_url: https://www.chelseasmessyapron.com
+    search_pattern: "/?s={query}"
+    categories:
+      vegetarian: "/category/vegetarian/"
+      chicken: "/category/chicken/"
+      beef: "/category/beef/"
+      seafood: "/category/seafood/"
+      30-minute: "/category/30-minute-meals/"
+
+  realfoodwholelife:
+    base_url: https://realfoodwholelife.com
+    search_pattern: "/?s={query}"
+    categories:
+      vegetarian: "/recipes/vegetarian/"
+      chicken: "/recipes/chicken/"
+      fish: "/recipes/fish-seafood/"
+      beef: "/recipes/beef/"
+
+  damndelicious:
+    base_url: https://damndelicious.net
+    search_pattern: "/?s={query}"
+    categories:
+      vegetarian: "/category/vegetarian/"
+      chicken: "/category/chicken/"
+      beef: "/category/beef/"
+      seafood: "/category/seafood/"
+      30-minute: "/category/30-min-meals/"
+
+  cucinabyelena:
+    base_url: https://www.cucinabyelena.com
+    search_pattern: "/?s={query}"
+    categories: {}
